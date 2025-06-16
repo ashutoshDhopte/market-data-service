@@ -1,0 +1,18 @@
+from pydantic import BaseModel
+from datetime import datetime
+
+class PriceLatest(BaseModel):
+    symbol: str
+    price: float
+    timestamp: datetime
+    provider: str
+
+class PollRequest(BaseModel):
+    symbols: list[str]
+    interval: int
+    provider: str = "alpha_vantage" # Default provider
+
+class PollResponse(BaseModel):
+    job_id: str
+    status: str
+    config: dict
