@@ -4,7 +4,7 @@ from app.services import crud
 from app.services import market_provider
 from sqlalchemy.orm import Session
 from app.core.db import get_db
-import uuid
+from fastapi_cache.decorator import cache
 
 router = APIRouter(
     prefix="/prices",
@@ -15,6 +15,7 @@ router = APIRouter(
 #     print(f"Polling data for {symbol} from {provider}...")
 
 @router.get("/latest", response_model=PriceLatest)
+@cache(expire=60)
 async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Session = Depends(get_db)):
     """
     Fetches the latest price for a symbol.
@@ -23,6 +24,7 @@ async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Ses
     3. Stores the processed price point in the database.
     4. Returns the processed price.
     """
+    print(f"CACHE MISS: Fetching latest data for {symbol} from {provider_name}")
     # Step 1: Get the market data provider service
     try:
         provider_service = market_provider.get_provider(provider_name)
@@ -51,7 +53,11 @@ async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Ses
     )
 
 @router.post("/poll", status_code=status.HTTP_202_ACCEPTED, response_model=PollResponse)
+@cache(expire=60)
 async def poll_prices(request: PollRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+
+    print(f"CACHE MISS: Fetching poll data for {request.symbols} from {request.provider}")
+
     # Use background tasks to start the polling without blocking the response.
     # for symbol in request.symbols:
     #      background_tasks.add_task(poll_market_data_task, symbol, request.provider)
