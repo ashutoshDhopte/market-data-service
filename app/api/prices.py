@@ -5,11 +5,17 @@ from app.services import market_provider
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from fastapi_cache.decorator import cache
+import json
+from app.core.kafka_config import get_kafka_producer
+from typing import Final
+from datetime import datetime
 
 router = APIRouter(
     prefix="/prices",
     tags=["Prices"]
 )
+
+TOPIC: Final[str] = "price-events"
 
 # def poll_market_data_task(symbol: str, provider: str):
 #     print(f"Polling data for {symbol} from {provider}...")
@@ -44,6 +50,19 @@ async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Ses
 
     db.commit()
 
+    producer = get_kafka_producer()
+
+    message = {
+        "symbol": processed_price.symbol,
+        "price": processed_price.price,
+        "timestamp": processed_price.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "source": provider_name,
+        "raw_response_id": str(raw_response.id)
+    }
+
+    producer.produce(TOPIC, key=message["symbol"], value=json.dumps(message).encode('utf-8'))
+    producer.flush()
+
     # Step 5: Return the data in the correct API schema format
     return PriceLatest(
         symbol=processed_price.symbol,
@@ -53,10 +72,7 @@ async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Ses
     )
 
 @router.post("/poll", status_code=status.HTTP_202_ACCEPTED, response_model=PollResponse)
-@cache(expire=60)
 async def poll_prices(request: PollRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-
-    print(f"CACHE MISS: Fetching poll data for {request.symbols} from {request.provider}")
 
     # Use background tasks to start the polling without blocking the response.
     # for symbol in request.symbols:
