@@ -1,0 +1,33 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/usr/src/app/app  # Mount app directory for live-reloading
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://trading_user:trading_password@db/market_data
+      - REDIS_URL=redis://redis:6379
+
+  db:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=trading_user
+      - POSTGRES_PASSWORD=trading_password
+      - POSTGRES_DB=market_data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./scripts/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
