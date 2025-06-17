@@ -11,8 +11,8 @@ router = APIRouter(
     tags=["Prices"]
 )
 
-def poll_market_data_task(symbol: str, provider: str):
-    print(f"Polling data for {symbol} from {provider}...")
+# def poll_market_data_task(symbol: str, provider: str):
+#     print(f"Polling data for {symbol} from {provider}...")
 
 @router.get("/latest", response_model=PriceLatest)
 async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Session = Depends(get_db)):
@@ -51,14 +51,16 @@ async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Ses
     )
 
 @router.post("/poll", status_code=status.HTTP_202_ACCEPTED, response_model=PollResponse)
-async def poll_prices(request: PollRequest, background_tasks: BackgroundTasks):
-    job_id = f"poll_{uuid.uuid4()}"
+async def poll_prices(request: PollRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Use background tasks to start the polling without blocking the response.
-    for symbol in request.symbols:
-         background_tasks.add_task(poll_market_data_task, symbol, request.provider)
+    # for symbol in request.symbols:
+    #      background_tasks.add_task(poll_market_data_task, symbol, request.provider)
+
+    price_poll_config_id = crud.create_price_poll(db, symbols=request.symbols, interval=request.interval, provider=request.provider)
+    db.commit()
 
     return {
-        "job_id": job_id,
+        "job_id": f'poll_{price_poll_config_id}',
         "status": "accepted",
         "config": {
             "symbols": request.symbols,

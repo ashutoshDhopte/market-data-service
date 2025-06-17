@@ -10,7 +10,7 @@ class PriceLatest(BaseModel):
 class PollRequest(BaseModel):
     symbols: list[str]
     interval: int
-    provider: str = "alpha_vantage" # Default provider
+    provider: str = "yfinance" # Default provider
 
 class PollResponse(BaseModel):
     job_id: str

@@ -1,8 +1,9 @@
 import json
 from sqlalchemy.orm import Session
 from datetime import datetime
-from app.models.price import RawResponse, ProcessedPrice
+from app.models.price import RawResponse, ProcessedPrice, PollingJobConfigs
 from app.schemas.price import PriceLatest
+from typing import Optional, List
 
 def create_raw_response(db: Session, symbol: str, provider: str, response_data: dict) -> RawResponse:
     """Stores the raw JSON response from the market data provider."""
@@ -21,7 +22,6 @@ def create_processed_price(db: Session, raw_response: RawResponse, price: float)
     db_processed_price = ProcessedPrice(
         symbol=raw_response.symbol,
         price=float(price),
-        timestamp=datetime.utcnow(),
         provider=raw_response.provider,
         raw_response_id=raw_response.id
     )
@@ -30,8 +30,19 @@ def create_processed_price(db: Session, raw_response: RawResponse, price: float)
     db.refresh(db_processed_price)
     return db_processed_price
 
-from typing import Optional
-
 def get_latest_price_by_symbol(db: Session, symbol: str) -> Optional[ProcessedPrice]:
     """Retrieves the most recent processed price for a given symbol."""
     return db.query(ProcessedPrice).filter(ProcessedPrice.symbol == symbol).order_by(ProcessedPrice.timestamp.desc()).first()
+
+def create_price_poll(db: Session, symbols: list[str], interval: int, provider: str):
+    """Creates price polling record"""
+    symbols_comma_separated = ",".join(symbols)
+    db_polling_job_config = PollingJobConfigs(
+        symbols=symbols_comma_separated,
+        interval=interval,
+        provider=provider
+    )
+    db.add(db_polling_job_config)
+    db.flush()
+    db.refresh(db_polling_job_config)
+    return db_polling_job_config.id
