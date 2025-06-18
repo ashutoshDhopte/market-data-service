@@ -10,6 +10,10 @@ Built with FastAPI, PostgreSQL, Redis, Kafka, and Docker.
 - **Cache**: Redis for API response caching
 - **Message Broker**: Kafka for event-driven processing
 
+<img width="739" alt="System architeture" src="https://github.com/user-attachments/assets/359cf09d-1c13-4b41-9a67-d66f8f5d8cc4" />
+<img width="716" alt="Flow diagram" src="https://github.com/user-attachments/assets/4d25a59e-cd75-4017-9cc7-70ff1d0e5b10" />
+
+
 ---
 
 ## Setup
@@ -26,6 +30,9 @@ Built with FastAPI, PostgreSQL, Redis, Kafka, and Docker.
 Or manually:
 ```bash
 docker-compose up --build
+```
+```bash
+python3 ma_consumer.py
 ```
 
 ### Environment Variables
@@ -50,6 +57,7 @@ Once running, visit [http://localhost:8000/docs](http://localhost:8000/docs) for
 - **Kafka** for decoupled event processing
 - **Docker Compose** for orchestration
 - **SQLAlchemy** for ORM and DB access
+- Kafka message consumer `ma_consumer.py` and producer (main app) are separate to mirror a production-level microservice architecture.
 
 ---
 
