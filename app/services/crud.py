@@ -1,9 +1,7 @@
 import json
 from sqlalchemy.orm import Session
-from datetime import datetime
 from app.models.price import RawResponse, ProcessedPrice, PollingJobConfigs
-from app.schemas.price import PriceLatest
-from typing import Optional, List
+from typing import Optional
 
 def create_raw_response(db: Session, symbol: str, provider: str, response_data: dict) -> RawResponse:
     """Stores the raw JSON response from the market data provider."""

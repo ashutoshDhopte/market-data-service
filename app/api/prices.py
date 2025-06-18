@@ -8,7 +8,7 @@ from fastapi_cache.decorator import cache
 import json
 from app.core.kafka_config import get_kafka_producer
 from typing import Final
-from datetime import datetime
+import structlog
 
 router = APIRouter(
     prefix="/prices",
@@ -16,6 +16,7 @@ router = APIRouter(
 )
 
 TOPIC: Final[str] = "price-events"
+logger = structlog.get_logger(__name__)
 
 # def poll_market_data_task(symbol: str, provider: str):
 #     print(f"Polling data for {symbol} from {provider}...")
@@ -30,16 +31,32 @@ async def get_latest_price(symbol: str, provider_name: str = "yfinance", db: Ses
     3. Stores the processed price point in the database.
     4. Returns the processed price.
     """
-    print(f"CACHE MISS: Fetching latest data for {symbol} from {provider_name}")
+    logger.info(
+        "CACHE MISS: Fetching latest data",
+        symbol=symbol,
+        provider=provider_name
+    )
     # Step 1: Get the market data provider service
     try:
         provider_service = market_provider.get_provider(provider_name)
     except ValueError as e:
+        logger.error(
+            "Failed to get market provider", 
+            provider=provider_name, 
+            error=str(e), 
+            exc_info=True
+        )
         raise HTTPException(status_code=400, detail=str(e))
 
     # Step 2: Fetch data from the external API
     price_data = provider_service.get_latest_price(symbol)
     if not price_data:
+        logger.error(
+            "Price data not found", 
+            symbol=symbol,
+            provider=provider_name, 
+            exc_info=True
+        )
         raise HTTPException(status_code=404, detail=f"Price data for symbol '{symbol}' not found from provider '{provider_name}'.")
     
     # Step 3: Store the raw response using the CRUD service

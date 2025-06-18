@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+import structlog
 import yfinance as yf
+
+logger = structlog.get_logger(__name__)
 
 class MarketProvider(ABC):
     @abstractmethod
@@ -18,4 +21,9 @@ class YFinanceProvider(MarketProvider):
 def get_provider(provider_name: str) -> MarketProvider:
     if provider_name == "yfinance":
         return YFinanceProvider()
+    logger.error(
+        "Provider not supported", 
+        provider=provider_name, 
+        exc_info=True
+    )
     raise ValueError(f"Provider '{provider_name}' not supported.")

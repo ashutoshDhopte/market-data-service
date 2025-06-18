@@ -3,12 +3,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from dotenv import load_dotenv
+import structlog
 
+logger = structlog.get_logger(__name__)
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
+    logger.error(
+        "DATABASE_URL environment variable not set",
+        exc_info=True
+    )
     raise ValueError("DATABASE_URL environment variable not set")
 
 # The engine is the entry point to the database.
