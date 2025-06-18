@@ -1,4 +1,3 @@
-DROP TABLE IF EXISTS raw_responses;
 CREATE TABLE IF NOT EXISTS raw_responses (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR NOT NULL,
@@ -7,7 +6,6 @@ CREATE TABLE IF NOT EXISTS raw_responses (
     timestamp TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
 
-DROP TABLE IF EXISTS processed_prices;
 CREATE TABLE IF NOT EXISTS processed_prices (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR NOT NULL,
@@ -20,7 +18,6 @@ CREATE TABLE IF NOT EXISTS processed_prices (
 CREATE INDEX IF NOT EXISTS idx_processed_prices_symbol_timestamp
     ON processed_prices (symbol, timestamp DESC);
 
-DROP TABLE IF EXISTS symbol_averages;
 CREATE TABLE IF NOT EXISTS symbol_averages (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR UNIQUE NOT NULL,
@@ -28,7 +25,6 @@ CREATE TABLE IF NOT EXISTS symbol_averages (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
 
-DROP TABLE IF EXISTS polling_job_configs;
 CREATE TABLE IF NOT EXISTS polling_job_configs (
     id SERIAL PRIMARY KEY,
     symbols TEXT NOT NULL,

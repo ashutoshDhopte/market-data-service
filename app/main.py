@@ -1,22 +1,20 @@
-import os
 from fastapi import FastAPI
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-from app.api import prices
-from redis import asyncio as aioredis
+from app.api.prices import router
+from app.core.limiter import limiter
 from app.core.logging_config import setup_logging
 from contextlib import asynccontextmanager
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware, _rate_limit_exceeded_handler
+from app.core.redis import close_redis, setup_redis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # This function runs when the application starts.
     # It connects to Redis and initializes the cache.
     setup_logging()
-    redis_url = os.getenv("REDIS_URL", "redis://localhost")
-    redis = aioredis.from_url(redis_url)
-    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
-    print("Connected to Redis and initialized cache.")
+    await setup_redis()
     yield
+    await close_redis()
 
 app = FastAPI(
     title="Blockhouse Capital Market Data Service",
@@ -25,7 +23,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.include_router(prices.router)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.include_router(router)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 @app.get("/")
 def read_root():
