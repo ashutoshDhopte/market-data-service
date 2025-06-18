@@ -2,10 +2,21 @@ import json
 import os
 import socket
 import time
-from confluent_kafka import Consumer, KafkaError
+from confluent_kafka import Consumer, KafkaError, Producer, Message
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
+
+# --- Configuration ---
+KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
+PRICE_TOPIC = 'price-events'
+DLQ_TOPIC = 'price-events-dlq' # Dead Letter Queue topic
+CONSUMER_GROUP_ID = 'ma_calculators'
+MAX_RETRIES = 3
+
+# We need a producer within the consumer to send messages to the DLQ or for retries
+producer_conf = {'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS}
+producer = Producer(producer_conf)
 
 load_dotenv()
 
@@ -76,14 +87,14 @@ def run_consumer():
     wait_for_port("localhost", 9092, 60)
 
     consumer_conf = {
-        'bootstrap.servers': 'localhost:9092',
-        'group.id': 'ma_calculators',
-        'auto.offset.reset': 'earliest'
+        'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
+        'group.id': CONSUMER_GROUP_ID,
+        'auto.offset.reset': 'earliest',
+        'enable.auto.commit': False
     }
 
-
     consumer = Consumer(consumer_conf)
-    consumer.subscribe(['price-events'])
+    consumer.subscribe([PRICE_TOPIC])
 
     print("Consumer is running...")
     try:
@@ -99,19 +110,39 @@ def run_consumer():
                 else:
                     break
 
-            event = json.loads(msg.value().decode('utf-8'))
-            symbol = event['symbol']
-            print(f"Consumed event for {symbol}")
+            for i in range(MAX_RETRIES): #try to process with max_retries times
 
-            # get last 5 prices
-            price_list = get_last5_price_by_symbol(symbol)
+                try:
+                    event = json.loads(msg.value().decode('utf-8'))
+                    symbol = event['symbol']
+                    print(f"Consumed event for {symbol}")
 
-            # calculate ma
-            ma = calculate_moving_average(price_list)
+                    # get last 5 prices
+                    price_list = get_last5_price_by_symbol(symbol)
 
-            # save ma to symbol_average table
-            save_symbol_ma(symbol, ma)
+                    # calculate ma
+                    ma = calculate_moving_average(price_list)
 
+                    # save ma to symbol_average table
+                    save_symbol_ma(symbol, ma)
+
+                    consumer.commit(asynchronous=False)
+                    break
+
+                except Exception as e:
+
+                    print("Retry count "+str(i+1))
+
+                    if i == MAX_RETRIES-1:
+                        print(f"Max retries ({MAX_RETRIES}) exceeded. Sending message to DLQ: {DLQ_TOPIC}")
+                        # send to DLQ if max retries are exhausted
+                        producer.produce(
+                            topic=DLQ_TOPIC,
+                            value=msg.value(),
+                            key=msg.key(),
+                            headers=msg.headers() # Preserve original headers
+                        )
+                        consumer.commit(asynchronous=False)
     finally:
         consumer.close()
 
