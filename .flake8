@@ -1,17 +1,13 @@
 [flake8]
-# Comma-separated list of folders or files to exclude from checks.
-# The default includes .git, __pycache__, .hg, .tox.
-# We are adding the virtual environment folder to the exclusion list.
+# Comma-separated list of folders to exclude from checks.
 exclude =
     .git,
     __pycache__,
-    .tox,
-    .hg,
     venv/
 
 # Set the max line length, consistent with your CI file.
 max-line-length = 127
 
-# You can also ignore specific error codes if needed.
+# Optional: Ignore specific error codes if you find them too noisy.
 # For example, to ignore the "line too long" error:
 # ignore = E501

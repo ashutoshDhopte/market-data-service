@@ -1,8 +1,8 @@
 import json
 from typing import Final
 
-import structlog
 import fastapi
+import structlog
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
@@ -20,20 +20,20 @@ logger = structlog.get_logger(__name__)
 
 
 @router.get(
-        "/latest", 
-        response_model=PriceLatest,
-        responses={
-            429: {
-                "model": RateLimitError,
-                "description": "Rate limit exceeded. The client has sent too many requests in a given amount of time.",
-                "headers": {
-                    "Retry-After": {
-                        "description": "The number of seconds to wait before making a new request.",
-                        "schema": {"type": "integer"}
-                    }
+    "/latest",
+    response_model=PriceLatest,
+    responses={
+        429: {
+            "model": RateLimitError,
+            "description": "Rate limit exceeded. The client has sent too many requests in a given amount of time.",
+            "headers": {
+                "Retry-After": {
+                    "description": "The number of seconds to wait before making a new request.",
+                    "schema": {"type": "integer"},
                 }
-            }
+            },
         }
+    },
 )
 @limiter.limit("5/minute")
 async def get_latest_price(
@@ -48,16 +48,12 @@ async def get_latest_price(
 
     if cached_price:
         logger.info(
-            "CACHE HIT: Returning cached data",
-            symbol=symbol,
-            provider=provider_name
+            "CACHE HIT: Returning cached data", symbol=symbol, provider=provider_name
         )
         return json.loads(cached_price)
 
     logger.info(
-        "CACHE MISS: Fetching latest data",
-        symbol=symbol,
-        provider=provider_name
+        "CACHE MISS: Fetching latest data", symbol=symbol, provider=provider_name
     )
 
     try:
@@ -74,10 +70,7 @@ async def get_latest_price(
     price_data = provider_service.get_latest_price(symbol)
     if not price_data:
         logger.error(
-            "Price data not found",
-            symbol=symbol,
-            provider=provider_name,
-            exc_info=True
+            "Price data not found", symbol=symbol, provider=provider_name, exc_info=True
         )
         raise fastapi.HTTPException(
             status_code=404,
@@ -118,7 +111,9 @@ async def get_latest_price(
     return response_data
 
 
-@router.post("/poll", status_code=fastapi.status.HTTP_202_ACCEPTED, response_model=PollResponse)
+@router.post(
+    "/poll", status_code=fastapi.status.HTTP_202_ACCEPTED, response_model=PollResponse
+)
 @limiter.limit("10/minute")
 async def poll_prices(
     request: fastapi.Request,
