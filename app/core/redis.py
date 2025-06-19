@@ -1,7 +1,9 @@
 import os
+
 from redis.asyncio import Redis
 
 redis_pool: Redis = None
+
 
 def get_redis_pool():
     """
@@ -9,14 +11,20 @@ def get_redis_pool():
     """
     return redis_pool
 
+
 async def setup_redis():
     """
     Initializes the Redis connection pool. To be called at application startup.
     """
     global redis_pool
     redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
-    redis_pool = Redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+    redis_pool = Redis.from_url(
+        redis_url,
+        encoding="utf-8",
+        decode_responses=True
+    )
     print("Redis connection pool initialized.")
+
 
 async def close_redis():
     """

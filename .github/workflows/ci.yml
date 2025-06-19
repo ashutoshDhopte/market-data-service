@@ -1,0 +1,71 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      # --- This multi-step process replicates the logic of your start.sh script ---
+      - name: Start services with Docker Compose
+        run: docker compose up --build -d
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for backend services to initialize..."
+          sleep 20
+
+      - name: Run Kafka Consumer in Background & Execute Tests
+        run: |
+          echo "Starting consumer in the background..."
+          # Run the consumer as a background process
+          python ma_consumer.py &
+          # Give the consumer a second to start up
+          sleep 5
+          
+          echo "Running pytest suite..."
+          # Run the tests while the consumer is active
+          pytest
+
+      - name: Stop services after tests
+        # This step runs even if the tests fail, to ensure cleanup.
+        if: always()
+        run: |
+          echo "Tearing down services..."
+          docker compose down
+
+      # --- This step remains the same, building the final image for deployment ---
+      - name: Build Docker image for deployment
+        if: success() # Only run if all previous steps passed
+        run: |
+          docker build . --file Dockerfile --tag my-fastapi-app:${{ github.sha }}
+
+      # --- Optional deployment placeholder ---
+      - name: Deploy to Staging (Placeholder)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Deploying image my-fastapi-app:${{ github.sha }} to staging..."
+          # Real deployment steps (e.g., docker push, kubectl apply) would go here.
+          echo "Deployment complete."

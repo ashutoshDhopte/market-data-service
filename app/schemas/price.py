@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from datetime import datetime
+
+from pydantic import BaseModel
+
 
 class PriceLatest(BaseModel):
     symbol: str
@@ -7,10 +9,12 @@ class PriceLatest(BaseModel):
     timestamp: datetime
     provider: str
 
+
 class PollRequest(BaseModel):
     symbols: list[str]
     interval: int
-    provider: str = "yfinance" # Default provider
+    provider: str = "yfinance"  # Default provider
+
 
 class PollResponse(BaseModel):
     job_id: str
