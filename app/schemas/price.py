@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PriceLatest(BaseModel):
@@ -20,3 +20,7 @@ class PollResponse(BaseModel):
     job_id: str
     status: str
     config: dict
+
+class RateLimitError(BaseModel):
+    detail: str = Field(..., example="Rate limit exceeded: 5 per minute")
+    error_message: str = Field(..., example="Too many requests. Please try again later.")

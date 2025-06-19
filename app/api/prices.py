@@ -10,7 +10,7 @@ from app.core.db import get_db
 from app.core.kafka_config import get_kafka_producer
 from app.core.limiter import limiter
 from app.core.redis import get_redis_pool
-from app.schemas.price import PollRequest, PollResponse, PriceLatest
+from app.schemas.price import PollRequest, PollResponse, PriceLatest, RateLimitError
 from app.services import crud, market_provider
 
 router = fastapi.APIRouter(prefix="/prices", tags=["Prices"])
@@ -19,7 +19,22 @@ TOPIC: Final[str] = "price-events"
 logger = structlog.get_logger(__name__)
 
 
-@router.get("/latest", response_model=PriceLatest)
+@router.get(
+        "/latest", 
+        response_model=PriceLatest,
+        responses={
+            429: {
+                "model": RateLimitError,
+                "description": "Rate limit exceeded. The client has sent too many requests in a given amount of time.",
+                "headers": {
+                    "Retry-After": {
+                        "description": "The number of seconds to wait before making a new request.",
+                        "schema": {"type": "integer"}
+                    }
+                }
+            }
+        }
+)
 @limiter.limit("5/minute")
 async def get_latest_price(
     request: fastapi.Request,
