@@ -10,6 +10,9 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "postgresql://trading_user:trading_password@localhost:5432/market_data"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
