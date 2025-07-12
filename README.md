@@ -1,5 +1,7 @@
 # Market Data Service
 
+[Youtube demo](https://youtu.be/4fyELCZAGyc)
+
 ## Overview
 
 A microservice for fetching, processing, and serving market data.
